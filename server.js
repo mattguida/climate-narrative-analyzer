@@ -306,11 +306,11 @@ app.post('/api/analyze-manual', async (req, res) => {
     
     console.log('Analyzing manual article:', title);
     
-    // Use Ollama for manual analysis (free, but slower)
+    // Use Claude API for manual analysis (higher quality)
     const [charactersResult, actionResult, storyResult] = await Promise.all([
-      analyzeWithOllama(PROMPTS.characters, articleText),
-      analyzeWithOllama(PROMPTS.action, articleText),
-      analyzeWithOllama(PROMPTS.story, articleText)
+      analyzeWithClaude(PROMPTS.characters, articleText),
+      analyzeWithClaude(PROMPTS.action, articleText),
+      analyzeWithClaude(PROMPTS.story, articleText)
     ]);
     
     const analysis = {

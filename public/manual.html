@@ -311,7 +311,7 @@
                             required
                         ></textarea>
                         <div class="help-text">
-                            ⚠️ Note: Manual analysis uses a free LLM service and may take 30-60 seconds. Results are not saved to the database.
+                            ⚠️ Note: Manual analysis uses the Claude API for higher quality analysis and may take 30-60 seconds. Results are not saved to the database.
                         </div>
                     </div>
                     
@@ -402,7 +402,7 @@
                     <div class="error-message">
                         <strong>Analysis Failed</strong>
                         <p>${error.message}</p>
-                        <p style="font-size: 0.9rem; margin-top: 10px;">Make sure Ollama is running on your system.</p>
+                        <p style="font-size: 0.9rem; margin-top: 10px;">Please check your Claude API configuration.</p>
                     </div>
                 `;
                 resultsDiv.classList.add('active');
