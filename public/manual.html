@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Analysis - Climate Narrative Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .nav-tab {
+            padding: 12px 24px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: #333;
+        }
+        
+        .nav-tab:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+        
+        .nav-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .input-section {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        .input-section h2 {
+            color: #8B7EC8;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #8B7EC8;
+        }
+        
+        textarea.form-input {
+            min-height: 300px;
+            resize: vertical;
+        }
+        
+        .analyze-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .help-text {
+            font-size: 0.9rem;
+            color: #999;
+            margin-top: 8px;
+        }
+        
+        .results-section {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        .results-section h2 {
+            color: #8B7EC8;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 100px 20px;
+            color: #999;
+        }
+        
+        .no-results-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+        
+        .analyzing {
+            display: none;
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .analyzing.active {
+            display: block;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #8B7EC8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .results-content {
+            display: none;
+        }
+        
+        .results-content.active {
+            display: block;
+        }
+        
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #8B7EC8;
+        }
+        
+        .result-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .result-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #8B7EC8;
+            margin: 10px 0;
+        }
+        
+        .result-description {
+            font-size: 0.95rem;
+            color: #666;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+        
+        .error-message {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #d63031;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 Climate Narrative Analyzer</h1>
+            <p>Paste any climate article for instant analysis</p>
+            <div class="nav-tabs">
+                <a href="/" class="nav-tab">Dashboard</a>
+                <a href="/manual.html" class="nav-tab active">Manual Analysis</a>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Input Section -->
+            <div class="input-section">
+                <h2>📝 Article Input</h2>
+                
+                <form id="analysis-form">
+                    <div class="form-group">
+                        <label class="form-label" for="article-title">Article Title *</label>
+                        <input 
+                            type="text" 
+                            id="article-title" 
+                            class="form-input" 
+                            placeholder="Enter the article title"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="article-source">Source (Optional)</label>
+                        <input 
+                            type="text" 
+                            id="article-source" 
+                            class="form-input" 
+                            placeholder="e.g., The Guardian, BBC, etc."
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="article-text">Article Text *</label>
+                        <textarea 
+                            id="article-text" 
+                            class="form-input" 
+                            placeholder="Paste the full article text here (at least a few paragraphs for best results)"
+                            required
+                        ></textarea>
+                        <div class="help-text">
+                            ⚠️ Note: Manual analysis uses a free LLM service and may take 30-60 seconds. Results are not saved to the database.
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="analyze-btn" id="analyze-btn">
+                        🤖 Analyze Article
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Results Section -->
+            <div class="results-section">
+                <h2>📊 Analysis Results</h2>
+                
+                <!-- No results state -->
+                <div id="no-results" class="no-results">
+                    <div class="no-results-icon">👈</div>
+                    <p>Fill in the form and click "Analyze Article" to see results</p>
+                </div>
+                
+                <!-- Analyzing state -->
+                <div id="analyzing" class="analyzing">
+                    <div class="loading-spinner"></div>
+                    <p>Analyzing narrative components...</p>
+                    <p style="font-size: 0.9rem; color: #999; margin-top: 10px;">This may take 30-60 seconds</p>
+                </div>
+                
+                <!-- Results -->
+                <div id="results-content" class="results-content">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE_URL = window.location.origin;
+        
+        document.getElementById('analysis-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await analyzeArticle();
+        });
+        
+        async function analyzeArticle() {
+            const title = document.getElementById('article-title').value.trim();
+            const source = document.getElementById('article-source').value.trim();
+            const text = document.getElementById('article-text').value.trim();
+            
+            if (!title || !text) {
+                alert('Please fill in the required fields (Title and Article Text)');
+                return;
+            }
+            
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const noResults = document.getElementById('no-results');
+            const analyzing = document.getElementById('analyzing');
+            const resultsDiv = document.getElementById('results-content');
+            
+            // Show loading state
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = '⏳ Analyzing...';
+            noResults.style.display = 'none';
+            analyzing.classList.add('active');
+            resultsDiv.classList.remove('active');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/analyze-manual`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        source: source || 'User Provided',
+                        excerpt: text
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Analysis failed');
+                }
+                
+                const analysis = await response.json();
+                displayResults(analysis);
+                
+            } catch (error) {
+                console.error('Error analyzing article:', error);
+                resultsDiv.innerHTML = `
+                    <div class="error-message">
+                        <strong>Analysis Failed</strong>
+                        <p>${error.message}</p>
+                        <p style="font-size: 0.9rem; margin-top: 10px;">Make sure Ollama is running on your system.</p>
+                    </div>
+                `;
+                resultsDiv.classList.add('active');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = '🤖 Analyze Article';
+                analyzing.classList.remove('active');
+            }
+        }
+        
+        function displayResults(analysis) {
+            const resultsDiv = document.getElementById('results-content');
+            
+            let html = '';
+            
+            // Characters Analysis
+            if (analysis.characters) {
+                const chars = analysis.characters;
+                html += `
+                    <div class="result-card">
+                        <h3>🦸‍♂️ Narrative Characters</h3>
+                        <div style="margin-top: 15px;">
+                            <strong>Hero:</strong>
+                            <div class="result-value">${formatClass(chars.hero_class || 'NONE')}</div>
+                            
+                            <strong>Villain:</strong>
+                            <div class="result-value">${formatClass(chars.villain_class || 'NONE')}</div>
+                            
+                            <strong>Victim:</strong>
+                            <div class="result-value">${formatClass(chars.victim_class || 'NONE')}</div>
+                            
+                            <strong>Focus:</strong>
+                            <div class="result-value">${chars.focus || 'UNKNOWN'}</div>
+                        </div>
+                        <div class="result-description">
+                            ${generateCharactersDescription(chars)}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Action Analysis
+            if (analysis.action) {
+                const action = analysis.action;
+                html += `
+                    <div class="result-card">
+                        <h3>⚔️ Conflict Type</h3>
+                        <div class="result-value">${formatClass(action.action || 'UNKNOWN')}</div>
+                        <div class="result-description">
+                            ${getActionDescription(action.action)}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Cultural Story Analysis
+            if (analysis.story) {
+                const story = analysis.story;
+                html += `
+                    <div class="result-card">
+                        <h3>🏛️ Cultural Story</h3>
+                        <div class="result-value">${formatClass(story.story || 'UNKNOWN')}</div>
+                        <div class="result-description">
+                            ${getStoryDescription(story.story)}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.add('active');
+        }
+        
+        function generateCharactersDescription(chars) {
+            let desc = 'This article frames ';
+            const parts = [];
+            
+            if (chars.hero_class !== 'NONE') {
+                parts.push(`<strong>${formatClass(chars.hero_class)}</strong> as the hero`);
+            }
+            if (chars.villain_class !== 'NONE') {
+                parts.push(`<strong>${formatClass(chars.villain_class)}</strong> as the villain`);
+            }
+            if (chars.victim_class !== 'NONE') {
+                parts.push(`<strong>${formatClass(chars.victim_class)}</strong> as the victim`);
+            }
+            
+            if (parts.length === 0) {
+                desc += 'no clear characters in this narrative.';
+            } else if (parts.length === 1) {
+                desc += parts[0] + '.';
+            } else if (parts.length === 2) {
+                desc += parts[0] + ' and ' + parts[1] + '.';
+            } else {
+                desc += parts[0] + ', ' + parts[1] + ', and ' + parts[2] + '.';
+            }
+            
+            if (chars.focus) {
+                desc += ` The narrative primarily focuses on the <strong>${chars.focus.toLowerCase()}</strong>.`;
+            }
+            
+            return desc;
+        }
+        
+        function getActionDescription(action) {
+            const descriptions = {
+                'FUEL_RESOLUTION': 'This article describes measures, policies, or events that would contribute to resolving the climate crisis.',
+                'FUEL_CONFLICT': 'This article describes measures, policies, or events that would exacerbate the climate crisis.',
+                'PREVENT_RESOLUTION': 'This article criticizes climate solutions or denies the climate crisis, potentially blocking resolution efforts.',
+                'PREVENT_CONFLICT': 'This article opposes actions that worsen climate change or provides evidence supporting climate action.'
+            };
+            return descriptions[action] || 'Unable to determine the conflict type.';
+        }
+        
+        function getStoryDescription(story) {
+            const descriptions = {
+                'HIERARCHICAL': 'This worldview assumes nature can be controlled through proper institutional management and scientific oversight. It emphasizes the role of experts and government intervention.',
+                'INDIVIDUALISTIC': 'This worldview assumes nature is resilient and will self-correct. It emphasizes market-based solutions, individual innovation, and minimal government intervention.',
+                'EGALITARIAN': 'This worldview sees nature as fragile with limited room for error. It emphasizes collective action, systemic change, and challenges to profit-driven systems.'
+            };
+            return descriptions[story] || 'Unable to determine the cultural story.';
+        }
+        
+        function formatClass(className) {
+            if (className === 'NONE' || className === 'UNKNOWN') {
+                return className;
+            }
+            return className
+                .split('_')
+                .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+                .join(' ')
+                .replace(/\./g, '');
+        }
+    </script>
+</body>
+</html>
