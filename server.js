@@ -107,6 +107,22 @@ Please return a json object which consists of the following field:
 story: a label from the classes above.`
 };
 
+// ==================== HELPER FUNCTIONS ====================
+
+// Calculate ISO week number from date
+function getWeekNumber(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  // Set to nearest Thursday: current date + 4 - current day number
+  // Make Sunday's day number 7
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  // Get first day of year
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  // Calculate full weeks to nearest Thursday
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return weekNo;
+}
+
 // ==================== SCRAPING & ANALYSIS ====================
 
 // Fetch articles from RSS feeds
@@ -224,17 +240,22 @@ async function runWeeklyAnalysis() {
           analyzeWithClaude(PROMPTS.story, articleText)
         ]);
         
-        // Save to database
+        // Parse the article date
+        const articleDate = new Date(article.date);
+        
+        // Save to database with year and week_number
         const analysis = new ArticleAnalysis({
           title: article.title,
           source: article.source,
-          date: new Date(article.date),
+          date: articleDate,
           excerpt: article.excerpt,
           link: article.link,
           characters: charactersResult,
           action: actionResult,
           story: storyResult,
-          analysis_type: 'automated'
+          analysis_type: 'automated',
+          year: articleDate.getFullYear(),
+          week_number: getWeekNumber(articleDate)
         });
         
         await analysis.save();
@@ -374,7 +395,7 @@ app.get('/api/statistics', async (req, res) => {
       stats.by_source[article.source] = (stats.by_source[article.source] || 0) + 1;
       
       // By week
-      const weekKey = `${article.year}-W${article.week_number}`;
+      const weekKey = `${article.year}-W${String(article.week_number).padStart(2, '0')}`;
       stats.by_week[weekKey] = (stats.by_week[weekKey] || 0) + 1;
       
       // Characters
