@@ -34,27 +34,32 @@ mongoose.connect(MONGODB_URI)
 // RSS parser
 const parser = new Parser();
 
-// Climate news RSS feeds with political bias classifications (AllSides Media Bias Chart)
+// Climate news RSS feeds — CC-licensed sources only
+// Al Jazeera: CC BY | The Conversation: CC BY-ND 4.0 | Democracy Now!: CC BY-NC-ND 3.0 | Global Voices: CC BY 3.0
 const NEWS_FEEDS = [
   {
-    url: 'https://www.theguardian.com/environment/climate-crisis/rss',
-    bias: 'Left',
-    name: 'The Guardian'
-  },
-  {
-    url: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml',
+    url: 'https://www.aljazeera.com/xml/rss/all.xml',
     bias: 'Center',
-    name: 'BBC News'
+    name: 'Al Jazeera',
+    license: 'CC BY'
   },
   {
-    url: 'https://www.reuters.com/rssfeed/environment',
+    url: 'https://theconversation.com/us/environment/articles.atom',
     bias: 'Center',
-    name: 'Reuters'
+    name: 'The Conversation',
+    license: 'CC BY-ND 4.0'
   },
   {
-    url: 'https://climateandcapitalism.com/feed/',
+    url: 'https://www.democracynow.org/democracynow.rss',
     bias: 'Left',
-    name: 'Climate & Capitalism'
+    name: 'Democracy Now!',
+    license: 'CC BY-NC-ND 3.0'
+  },
+  {
+    url: 'https://globalvoices.org/-/topics/environment/feed/',
+    bias: 'Center',
+    name: 'Global Voices',
+    license: 'CC BY 3.0'
   }
 ];
 
@@ -62,11 +67,11 @@ const NEWS_FEEDS = [
 const PROMPTS = {
   characters: `You are a social scientist specializing in climate change. You will be given a newspaper article and asked who is framed as a hero, villain or a victim in it. For each of these categories, you will be asked to classify it into the following classes:
 
-GOVERNMENTS_POLITICIANS_POLIT.ORGS: governments, politicians, and political organizations
-INDUSTRY_EMISSIONS: industries, businesses, and the pollution created by them
-LEGISLATION_POLICIES_RESPONSES: policies and legislation responses
-GENERAL_PUBLIC: general public, individuals, and society, including their wellbeing, status quo and economy
-ANIMALS_NATURE_ENVIRONMENT: nature and environment in general or specific species
+GOVERNMENTS_POLITICIANS_POLIT.ORGS: governments, politicians, and political organizations;
+INDUSTRY_EMISSIONS: industries, businesses, and the pollution created by them;
+LEGISLATION_POLICIES_RESPONSES: policies and legislation responses;
+GENERAL_PUBLIC: general public, individuals, and society, including their wellbeing, status quo and economy;
+ANIMALS_NATURE_ENVIRONMENT: nature and environment in general or specific species;
 ENV.ORGS_ACTIVISTS: climate activists and organizations
 SCIENCE_EXPERTS_SCI.REPORTS: scientists and scientific reports/research
 CLIMATE_CHANGE: climate change as a process or consequence
@@ -125,6 +130,21 @@ function getWeekNumber(date) {
 
 // ==================== SCRAPING & ANALYSIS ====================
 
+// Keywords for filtering articles to climate/environment topics
+const CLIMATE_KEYWORDS = [
+  'climate', 'environment', 'emission', 'carbon', 'fossil fuel', 'renewable',
+  'greenhouse', 'global warming', 'net zero', 'biodiversity', 'deforestation',
+  'pollution', 'sustainability', 'energy transition', 'sea level', 'wildfire',
+  'drought', 'flood', 'extreme weather', 'paris agreement', 'cop', 'methane',
+  'solar', 'wind power', 'electric vehicle', 'oil', 'gas', 'coal', 'arctic',
+  'glacier', 'ecosystem', 'species', 'extinction'
+];
+
+function isClimateRelated(title, excerpt) {
+  const text = `${title} ${excerpt}`.toLowerCase();
+  return CLIMATE_KEYWORDS.some(kw => text.includes(kw));
+}
+
 // Fetch articles from RSS feeds
 async function fetchArticles() {
   const articles = [];
@@ -132,14 +152,17 @@ async function fetchArticles() {
   for (const feed of NEWS_FEEDS) {
     try {
       const feedData = await parser.parseURL(feed.url);
-      const recentArticles = feedData.items.slice(0, 5).map(item => ({
-        title: item.title,
-        source: feed.name, // Use the clean name instead of feed.title
-        date: item.pubDate || item.isoDate,
-        excerpt: item.contentSnippet || item.content?.substring(0, 500) || '',
-        link: item.link,
-        bias: feed.bias // Add bias classification
-      }));
+      const recentArticles = feedData.items
+        .map(item => ({
+          title: item.title,
+          source: feed.name,
+          date: item.pubDate || item.isoDate,
+          excerpt: item.contentSnippet || item.content?.substring(0, 500) || '',
+          link: item.link,
+          bias: feed.bias
+        }))
+        .filter(item => isClimateRelated(item.title, item.excerpt))
+        .slice(0, 5);
       articles.push(...recentArticles);
     } catch (error) {
       console.error(`Error fetching feed ${feed.url}:`, error.message);
@@ -155,9 +178,10 @@ async function analyzeWithClaude(systemPrompt, articleText) {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
+      system: systemPrompt,
       messages: [{
         role: 'user',
-        content: `${systemPrompt}\n\nArticle:\n${articleText}`
+        content: `Article:\n${articleText}`
       }]
     });
     
@@ -174,7 +198,8 @@ async function analyzeWithOllama(systemPrompt, articleText) {
   try {
     const response = await ollama.generate({
       model: OLLAMA_MODEL,
-      prompt: `${systemPrompt}\n\nArticle:\n${articleText}`,
+      system: systemPrompt,
+      prompt: `Article:\n${articleText}`,
       format: 'json',
       stream: false
     });
@@ -454,10 +479,9 @@ app.get('/api/trends', async (req, res) => {
       query.source = { $in: sourcesWithBias };
     }
 
-    // Get distinct week/year combinations
+    // Get all matching articles sorted newest first
     const articles = await ArticleAnalysis.find(query)
-      .sort({ year: -1, week_number: -1 })
-      .limit(limit * 20); // Approximate
+      .sort({ year: -1, week_number: -1 });
     
     // Group by week
     const weeklyData = {};

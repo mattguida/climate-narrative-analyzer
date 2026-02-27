@@ -459,14 +459,15 @@
         // Display weekly trends chart
         function displayWeeklyTrends(trends) {
             const ctx = document.getElementById('weeklyTrendsChart');
-            
+            const sorted = [...trends].reverse(); // API returns newest-first; chart needs oldest-first
+
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: trends.map(t => t.week),
+                    labels: sorted.map(t => t.week),
                     datasets: [{
                         label: 'Articles per Week',
-                        data: trends.map(t => t.count),
+                        data: sorted.map(t => t.count),
                         borderColor: '#667eea',
                         backgroundColor: 'rgba(102, 126, 234, 0.1)',
                         tension: 0.4,
